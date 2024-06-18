@@ -147,6 +147,41 @@ export function getSongPathByID(
   });
 }
 
+export function editSong(db: sqlite3.Database, song: Song): Promise<number> {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE songs SET 
+                        path = ?, 
+                        image_mime = ?, 
+                        image_buffer = ?, 
+                        title = ?, 
+                        artist = ?, 
+                        album = ?, 
+                        genre = ?, 
+                        year = ?, 
+                        WHERE id = ?`,
+      [
+        song.path,
+        song.image_mime,
+        song.image_buffer,
+        song.title,
+        song.artist,
+        song.album,
+        song.genre,
+        song.year,
+        song.id,
+      ],
+      function (err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(song.id);
+        }
+      }
+    );
+  });
+}
+
 export function getPlaylistByName(
   db: sqlite3.Database,
   name: string
@@ -193,6 +228,18 @@ export function getSongsInPlaylist(
         }
       }
     );
+  });
+}
+
+export function getSongByID(db: sqlite3.Database, id: number): Promise<Song> {
+  return new Promise((resolve, reject) => {
+    db.get(`SELECT * FROM songs WHERE id = ?`, [id], (err, row) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(row as Song);
+      }
+    });
   });
 }
 

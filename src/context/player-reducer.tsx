@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   createContext,
   useContext,
@@ -6,60 +7,73 @@ import {
   useReducer,
 } from "react";
 import { Playlist, Song } from "@/db/models";
+import { ReactNode } from "react";
 
-interface PlayerStateType {
+interface Player {
   player: HTMLAudioElement;
-  history: String[];
-  playlistName: string;
   playlist: Playlist;
-  playlistIndex: number;
-  songs: Song[];
+  history: number[]; // song ids
+  autoQueue: number[]; // song ids, songs that are added to the queue automatically
+  userQueue: number[]; // song ids, songs that are added to the queue by the user
+  currentb64SongAudio: string;
+  nextb64SongAudio: string;
+
+  // settings
+  masterVolume: number;
+  sliderVolume: number;
   loop: boolean;
   shuffle: boolean;
   paused: boolean;
-  masterVolume: number;
-  sliderVolume: number;
   muted: boolean;
-  elapsed: number;
-  duration: number;
-  songEnded: boolean;
 }
 
-const initialState: PlayerStateType = {
+const initialState: Player = {
   player: new Audio(),
-  history: [],
-  playlistName: localStorage.getItem("playlistName") || "All songs",
+  history: localStorage.getItem("history")
+    ? JSON.parse(localStorage.getItem("history"))
+    : [],
+  autoQueue: localStorage.getItem("autoQueue")
+    ? JSON.parse(localStorage.getItem("autoQueue"))
+    : [],
+  userQueue: localStorage.getItem("userQueue")
+    ? JSON.parse(localStorage.getItem("userQueue"))
+    : [],
   playlist: null,
-  playlistIndex: Number(localStorage.getItem("playlistIndex")) || 0,
-  songs: [],
-  loop: JSON.parse(localStorage.getItem("loop")) || false,
-  shuffle: JSON.parse(localStorage.getItem("shuffle")) || false,
+  currentb64SongAudio: "",
+  nextb64SongAudio: "",
+
+  masterVolume: localStorage.getItem("masterVolume")
+    ? Number(localStorage.getItem("masterVolume"))
+    : 0.5,
+  sliderVolume: localStorage.getItem("sliderVolume")
+    ? Number(localStorage.getItem("sliderVolume"))
+    : 50,
+  loop: localStorage.getItem("loop")
+    ? JSON.parse(localStorage.getItem("loop"))
+    : false,
+  shuffle: localStorage.getItem("shuffle")
+    ? JSON.parse(localStorage.getItem("shuffle"))
+    : false,
   paused: true,
-  masterVolume: Number(localStorage.getItem("masterVolume")) || 0.5,
-  sliderVolume: Number(localStorage.getItem("sliderVolume")) || 50,
   muted: false,
-  elapsed: 0,
-  duration: 60,
-  songEnded: false,
 };
 
 const actionTypes = {
-  SET_HISTORY: "SET_HISTORY",
-  SET_PLAYLIST_NAME: "SET_PLAYLIST_NAME",
+  PUSH_TO_HISTORY: "PUSH_TO_HISTORY",
   SET_PLAYLIST: "SET_PLAYLIST",
-  SET_PLAYLIST_INDEX: "SET_PLAYLIST_INDEX",
-  SET_SONGS: "SET_SONGS",
-  SET_LOOP: "SET_LOOP",
-  SET_SHUFFLE: "SET_SHUFFLE",
-  SET_PAUSED: "SET_PAUSED",
+  USER_ENQUEUE: "USER_ENQUEUE",
+  AUTO_ENQUEUE: "AUTO_ENQUEUE",
+  PLAY_SONG: "PLAY_SONG",
+  SKIP: "SKIP",
+  PREVIOUS: "PREVIOUS",
+
+  TOGGLE_PLAY: "TOGGLE_PLAY",
+  TOGGLE_LOOP: "TOGGLE_LOOP",
+  TOGGLE_SHUFFLE: "TOGGLE_SHUFFLE",
+  TOGGLE_MUTE: "TOGGLE_MUTE",
+
   SET_MASTER_VOLUME: "SET_MASTER_VOLUME",
   SET_SLIDER_VOLUME: "SET_SLIDER_VOLUME",
-  SET_MUTED: "SET_MUTED",
-  SET_ELAPSED: "SET_ELAPSED",
-  SET_DURATION: "SET_DURATION",
-  PLAY_NEXT_SONG: "PLAY_NEXT_SONG",
-  PLAY_PREVIOUS_SONG: "PLAY_PREVIOUS_SONG",
-  JUMP_TO_SONG: "JUMP_TO_SONG",
 };
 
 function calcTotalVolume(sliderVolume: number, masterVolume: number) {
@@ -93,103 +107,106 @@ async function fetchSongAudio(songId: number) {
   }
 }
 
-function playerReducer(state, action) {
+function playerReducer(state: Player, action) {
   switch (action.type) {
-    case actionTypes.SET_HISTORY:
-      return { ...state, history: action.payload };
-    case actionTypes.SET_PLAYLIST_NAME:
-      localStorage.setItem("playlistName", action.playlistName);
-      state.playlistName = action.playlistName;
-      return { ...state, playlistName: action.payload };
+    case actionTypes.PUSH_TO_HISTORY:
+      return { ...state, history: [...state.history, action.songs] };
+
     case actionTypes.SET_PLAYLIST:
-      try {
-        state.player.pause();
-        return { ...state, playlist: action.payload };
-      } catch (error) {
-        console.error(error);
-      }
-      return { ...state, playlist: action.payload };
-    case actionTypes.SET_PLAYLIST_INDEX:
-      return { ...state, playlistIndex: action.payload };
-    case actionTypes.SET_SONGS:
-      return { ...state, songs: action.payload };
-    case actionTypes.SET_LOOP:
-      return { ...state, loop: action.payload };
-    case actionTypes.SET_SHUFFLE:
-      return { ...state, shuffle: action.payload };
-    case actionTypes.SET_PAUSED:
-      return { ...state, paused: action.payload };
-    case actionTypes.SET_MASTER_VOLUME:
-      return { ...state, masterVolume: action.payload };
-    case actionTypes.SET_SLIDER_VOLUME:
-      return { ...state, sliderVolume: action.payload };
-    case actionTypes.SET_MUTED:
-      return { ...state, muted: action.payload };
-    case actionTypes.SET_ELAPSED:
-      return { ...state, elapsed: action.payload };
-    case actionTypes.SET_DURATION:
-      return { ...state, duration: action.payload };
-    case actionTypes.PLAY_NEXT_SONG:
-      state.player.pause();
-      state.history.push(state.player.src);
-      const nextIndex = state.playlistIndex + 1;
-      if (state.songs[nextIndex]) {
-        state.playlistIndex = nextIndex;
-        localStorage.setItem("playlistIndex", nextIndex.toString());
-        if (state.paused === false) {
-          state.player.play();
-        }
+      if (!action.playlistName) {
+        var playlistName = localStorage.getItem("playlistName") || "All songs";
       } else {
-        console.log("no next song");
-        state.playlistIndex = 0;
-        localStorage.setItem("playlistIndex", "0");
-        if (state.loop) {
-          state.player.play();
-        } else {
-          state.paused = true;
-        }
+        var playlistName = action.playlistName as string;
       }
-      return { ...state, playNextSong: action.payload };
-    case actionTypes.PLAY_PREVIOUS_SONG:
+      return { ...state };
+
+    case actionTypes.USER_ENQUEUE:
+      return { ...state, userQueue: [...state.userQueue, action.songs] };
+
+    case actionTypes.AUTO_ENQUEUE:
+      return { ...state, autoQueue: [...state.autoQueue, action.songs] };
+
+    case actionTypes.PLAY_SONG:
+      state.player.pause();
+      state.currentb64SongAudio = await fetchSongAudio(action.songId);
+      state.player.src = `data:audio/mp3;base64,${state.currentb64SongAudio}`;
+      state.player.play().then(() => {
+        return { ...state };
+      });
+      return { ...state };
+
+    case actionTypes.SKIP:
+      state.player.pause();
+      if (state.userQueue.length > 0) {
+        let songId = state.userQueue.shift();
+        state.currentb64SongAudio = await fetchSongAudio(songId);
+        state.player.src = `data:audio/mp3;base64,${state.currentb64SongAudio}`;
+        state.player.play();
+        return { ...state };
+      }
+      if (state.autoQueue.length > 0) {
+        let songId = state.autoQueue.shift();
+        state.currentb64SongAudio = await fetchSongAudio(songId);
+        state.player.src = `data:audio/mp3;base64,${state.currentb64SongAudio}`;
+        state.player.play();
+        return { ...state };
+      }
+
+    case actionTypes.PREVIOUS:
       if (state.player.currentTime > 3) {
         state.player.currentTime = 0;
-        return { ...state, playPreviousSong: action.payload };
+        return { ...state };
       }
       if (state.history.length > 0) {
         state.player.pause();
-        const previousSong = state.history.pop();
-        state.player.src = previousSong;
-        state.playlistIndex = state.playlistIndex - 1;
-        localStorage.setItem("playlistIndex", state.playlistIndex.toString());
+        let songId = state.history.pop();
+        state.currentb64SongAudio = await fetchSongAudio(songId);
+        state.player.src = `data:audio/mp3;base64,${state.currentb64SongAudio}`;
         state.player.play();
       } else {
         state.player.currentTime = 0;
       }
-      return { ...state, playPreviousSong: action.payload };
-    case actionTypes.JUMP_TO_SONG:
-      state.player.pause();
-      state.history.push(state.player.src);
-      state.playlistIndex = action.index;
-      localStorage.setItem("playlistIndex", action.index.toString());
-      state.player.play();
-      return { ...state, jumpToSong: action.payload };
+      return { ...state };
+
+    case actionTypes.TOGGLE_LOOP:
+      return { ...state, loop: !state.loop };
+
+    case actionTypes.TOGGLE_SHUFFLE:
+      return { ...state, shuffle: !state.shuffle };
+
+    case actionTypes.TOGGLE_MUTE:
+      return { ...state, muted: !state.muted };
+
+    case actionTypes.SET_MASTER_VOLUME:
+      return { ...state, masterVolume: action.volume };
+
+    case actionTypes.SET_SLIDER_VOLUME:
+      if (action.volume === 0) {
+        return { ...state, sliderVolume: action.volume, muted: true };
+      } else {
+        return { ...state, sliderVolume: action.volume, muted: false };
+      }
+
     default:
       return state;
   }
 }
 export const PlayerContext = createContext(initialState);
 
-import { ReactNode } from "react";
-
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(playerReducer, initialState);
 
+  console.log(state);
+
   useEffect(() => {
-    localStorage.setItem("playlistName", state.playlistName);
-    localStorage.setItem("playlistIndex", state.playlistIndex);
+    localStorage.setItem("playlistName", state.playlist?.name || "All songs");
     localStorage.setItem("loop", state.loop);
     localStorage.setItem("shuffle", state.shuffle);
     localStorage.setItem("masterVolume", state.masterVolume);
+    localStorage.setItem("sliderVolume", state.sliderVolume);
+    localStorage.setItem("history", JSON.stringify(state.history));
+    localStorage.setItem("userQueue", JSON.stringify(state.userQueue));
+    localStorage.setItem("autoQueue", JSON.stringify(state.autoQueue));
   }, [state]);
 
   useEffect(() => {
@@ -200,7 +217,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   }, [state.sliderVolume, state.masterVolume]);
 
   useEffect(() => {
-    dispatch({ type: actionTypes.SET_PLAYLIST, payload: state.playlistName });
+    dispatch();
+  }, []);
+
+  useEffect(() => {
+    dispatch({ type: actionTypes.SET_PLAYLIST });
   }, []);
 
   return (

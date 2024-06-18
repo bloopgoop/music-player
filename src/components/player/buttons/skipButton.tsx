@@ -8,14 +8,15 @@ import {
 } from "@/components/ui/tooltip";
 
 const SkipButton = () => {
-  const { playNextSong } = usePlayer();
+  const { skip, ready } = usePlayer();
   return (
     <>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger
             className="w-8 h-8 p-2 rounded-full hover:bg-card active:translate-y-[1px] active:scale-95"
-            onClick={playNextSong}
+            onClick={skip}
+            disabled={!ready}
           >
             <TrackNextIcon />
           </TooltipTrigger>

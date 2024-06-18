@@ -7,11 +7,13 @@ const Image = ({
   mime,
   buffer,
   className,
+  ...props
 }: {
   alt: string | null;
   mime?: string | null;
   buffer?: string | null;
   className?: string;
+  [key: string]: any;
 }) => {
   return (
     <AspectRatio ratio={1 / 1}>
@@ -20,12 +22,14 @@ const Image = ({
           src={`data:${mime};base64,${buffer}`}
           alt={alt}
           className={cn("rounded-lg", className)}
+          {...props}
         />
       ) : (
         <img
           src={Placeholder}
           alt="placeholder"
           className={cn("rounded-lg", className)}
+          {...props}
         />
       )}
     </AspectRatio>

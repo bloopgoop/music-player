@@ -8,11 +8,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const ShuffleButton = () => {
-  const { shuffle, setShuffle } = usePlayer();
-  function toggleShuffle() {
-    setShuffle(!shuffle);
-    localStorage.setItem("shuffle", JSON.stringify(!shuffle));
-  }
+  const { shuffle, toggleShuffle } = usePlayer();
   return (
     <>
       <TooltipProvider>

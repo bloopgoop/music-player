@@ -3,94 +3,58 @@ import { Playlist, Song } from "@/db/models";
 
 type PlayerContextType = {
   player: HTMLAudioElement;
-  setPlayer: React.Dispatch<React.SetStateAction<HTMLAudioElement>>;
-
-  playlistName: string;
-  setPlaylistName: React.Dispatch<React.SetStateAction<string>>;
-
-  playlist: Playlist;
-  setPlaylist: React.Dispatch<React.SetStateAction<Playlist>>;
-
-  playlistIndex: number;
-  setPlaylistIndex: React.Dispatch<React.SetStateAction<number>>;
-
-  songs: Song[];
-  setSongs: React.Dispatch<React.SetStateAction<Song[]>>;
-
-  loop: boolean;
-  setLoop: React.Dispatch<React.SetStateAction<boolean>>;
-
-  shuffle: boolean;
-  setShuffle: React.Dispatch<React.SetStateAction<boolean>>;
-
-  paused: boolean;
-  setPaused: React.Dispatch<React.SetStateAction<boolean>>;
-
+  currentSongId: number;
+  currentPlaylistName: string;
   masterVolume: number;
-  setMasterVolume: React.Dispatch<React.SetStateAction<number>>;
-
   sliderVolume: number;
-  setSliderVolume: React.Dispatch<React.SetStateAction<number>>;
-
+  loop: boolean;
   muted: boolean;
-  setMuted: React.Dispatch<React.SetStateAction<boolean>>;
-
-  duration: number;
-  setDuration: React.Dispatch<React.SetStateAction<number>>;
-
-  playNextSong?: () => void;
-
-  playPreviousSong?: () => void;
-
-  jumpToSong?: (index: number) => void;
+  shuffle: boolean;
+  paused: boolean;
+  ready: boolean;
+  pushToHistory: (songIds: number[]) => void;
+  clearHistory: () => void;
+  pushToAutoQueue: (songIds: number[]) => void;
+  clearAutoQueue: () => void;
+  pushToUserQueue: (songIds: number[]) => void;
+  playSong: (songId: number) => Promise<void>;
+  skip: () => Promise<void>;
+  previous: () => Promise<void>;
+  togglePlay: () => void;
+  toggleMute: () => void;
+  toggleLoop: () => void;
+  toggleShuffle: () => void;
+  setCurrentPlaylistName: (playlistName: string) => void;
+  setMasterVolume: (volume: number) => void;
+  setSliderVolume: (volume: number) => void;
 };
 
-const initialPlayerContext: PlayerContextType = {
-  playlistName: "",
-  setPlaylistName: () => {},
-
-  playlist: null,
-  setPlaylist: () => [],
-
-  playlistIndex: 0,
-  setPlaylistIndex: () => 0,
-
-  player: null,
-  setPlayer: () => null,
-
-  songs: [],
-  setSongs: () => [],
-
-  loop: false,
-  setLoop: () => false,
-
-  shuffle: false,
-  setShuffle: () => false,
-
-  paused: false,
-  setPaused: () => false,
-
+const initialPlayerContext: PlayerContextType = {  
+  player: new Audio(),
+  currentSongId: null,
+  currentPlaylistName: "",
   masterVolume: 0.5,
-  setMasterVolume: () => 0.5,
-
   sliderVolume: 50,
-  setSliderVolume: () => 50,
-
+  loop: false,
   muted: false,
-  setMuted: () => false,
-
-  duration: 60,
-  setDuration: () => 60,
-
-  playNextSong: () => {},
-
-  playPreviousSong: () => {},
-
-  jumpToSong: () => {},
-};
-
-type PlayerProviderProps = {
-  children: React.ReactNode;
+  shuffle: false,
+  paused: true,
+  ready: false,
+  pushToHistory: () => {},
+  clearHistory: () => {},
+  pushToAutoQueue: () => {},
+  clearAutoQueue: () => {},
+  pushToUserQueue: () => {},
+  playSong: () => new Promise(() => {}),
+  skip: () => new Promise(() => {}),
+  previous: () => new Promise(() => {}),
+  togglePlay: () => {},
+  toggleMute: () => {},
+  toggleLoop: () => {},
+  toggleShuffle: () => {},
+  setCurrentPlaylistName: () => {},
+  setMasterVolume: () => {},
+  setSliderVolume: () => {},
 };
 
 function calcTotalVolume(sliderVolume: number, masterVolume: number) {
@@ -99,32 +63,33 @@ function calcTotalVolume(sliderVolume: number, masterVolume: number) {
 
 export const PlayerContext = createContext(initialPlayerContext);
 
-export const PlayerProvider = ({ children }: PlayerProviderProps) => {
-  const [player, setPlayer] = useState<HTMLAudioElement>(new Audio());
-  const [history, setHistory] = useState<string[]>([]);
-  const [playlistName, setPlaylistName] = useState<string>(
-    localStorage.getItem("playlistName")
-      ? localStorage.getItem("playlistName")
+export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
+  const [player] = useState<HTMLAudioElement>(new Audio());
+  const [history, setHistory] = useState<number[]>(
+    localStorage.getItem("history")
+      ? JSON.parse(localStorage.getItem("history"))
+      : []
+  );
+  const [autoQueue, setAutoQueue] = useState<number[]>(
+    localStorage.getItem("autoQueue")
+      ? JSON.parse(localStorage.getItem("autoQueue"))
+      : []
+  );
+  const [userQueue, setUserQueue] = useState<number[]>(
+    localStorage.getItem("userQueue")
+      ? JSON.parse(localStorage.getItem("userQueue"))
+      : []
+  );
+  const [currentSongId, setCurrentSongId] = useState<number>(
+    localStorage.getItem("currentSongId")
+      ? Number(localStorage.getItem("currentSongId"))
+      : null
+  );
+  const [currentPlaylistName, setCurrentPlaylistName] = useState<string>(
+    localStorage.getItem("currentPlaylistName")
+      ? localStorage.getItem("currentPlaylistName")
       : "All songs"
   );
-  const [playlist, setPlaylist] = useState<Playlist>(null);
-  const [playlistIndex, setPlaylistIndex] = useState(
-    localStorage.getItem("playlistIndex")
-      ? Number(localStorage.getItem("playlistIndex"))
-      : 0
-  );
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [loop, setLoop] = useState(
-    localStorage.getItem("loop")
-      ? JSON.parse(localStorage.getItem("loop"))
-      : false
-  );
-  const [shuffle, setShuffle] = useState(
-    localStorage.getItem("shuffle")
-      ? JSON.parse(localStorage.getItem("shuffle"))
-      : false
-  );
-  const [paused, setPaused] = useState(true);
   const [masterVolume, setMasterVolume] = useState(
     // 0-1
     localStorage.getItem("masterVolume")
@@ -137,122 +102,176 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
       ? Number(localStorage.getItem("sliderVolume"))
       : 50
   );
+  const [loop, setLoop] = useState(
+    localStorage.getItem("loop")
+      ? JSON.parse(localStorage.getItem("loop"))
+      : false
+  );
+  const [shuffle, setShuffle] = useState(
+    localStorage.getItem("shuffle")
+      ? JSON.parse(localStorage.getItem("shuffle"))
+      : false
+  );
+  const [paused, setPaused] = useState(true);
   const [muted, setMuted] = useState(false);
-  const [duration, setDuration] = useState(60);
-  const [songEnded, setSongEnded] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  console.log(
-    "provider rerendered"
-  )
+  // console.log("provider rerendered");
+  // console.log("history", history)
+  // console.log("autoQueue", autoQueue)
 
-  async function jumpToSong(index: number) {
-    player.pause();
-    setHistory([...history, player.src]);
-    const songAudio = await window.songs.getSongAudio(songs[index].id);
-    player.src = `data:audio/mp3;base64,${songAudio}`;
-    setPlaylistIndex(index);
-    localStorage.setItem("playlistIndex", index.toString());
-    player.play();
-  }
+  function safePlay() {
+    setReady(false);
+    var playPromise = player.play();
 
-  async function playNextSong() {
-    // If there is a next song, play it
-    player.pause();
-    setHistory([...history, player.src]);
-    if (songs[playlistIndex + 1]) {
-      console.log("theres a next song");
-      const songAudio = await window.songs.getSongAudio(
-        songs[playlistIndex + 1].id
-      );
-      player.src = `data:audio/mp3;base64,${songAudio}`;
-      setPlaylistIndex(playlistIndex + 1);
-      localStorage.setItem("playlistIndex", (playlistIndex + 1).toString());
-      if (!paused) {
-        player.play();
-      }
-    } else {
-      // Playlist has ended, pause player, set player.src to first song, reset song index
-      console.log("no next song");
-      const songAudio = await window.songs.getSongAudio(songs[0].id);
-      const firstSongInPlaylist = `data:audio/mp3;base64,${songAudio}`;
-      player.src = firstSongInPlaylist;
-      setPlaylistIndex(0);
-      localStorage.setItem("playlistIndex", "0");
-      if (loop) {
-        setPaused(false);
-        player.play();
-      } else {
-        setPaused(true);
-      }
+    // console.log("safePlay called");
+    // console.log(playPromise)
+    if (playPromise !== undefined) {
+      playPromise
+        .then((_) => {
+          // console.log("Audio is playing");
+          setReady(true);
+          return
+        })
+        .catch((error) => {
+          // console.error("Error playing audio:", error);
+          setReady(true);
+        });
     }
   }
 
-  function playPreviousSong() {
-    // If song has been playing for more than 3 seconds, restart song
-    if (player.currentTime > 3) {
-      player.currentTime = 0;
+  function pushToHistory(songIds: number[]) {
+    setHistory([...history, ...songIds]);
+    localStorage.setItem("history", JSON.stringify([...history, ...songIds]));
+  }
+
+  function clearHistory() {
+    setHistory([]);
+    localStorage.setItem("history", JSON.stringify([]));
+  }
+
+  function pushToAutoQueue(songIds: number[]) {
+    setAutoQueue([...autoQueue, ...songIds]);
+    localStorage.setItem(
+      "autoQueue",
+      JSON.stringify([...autoQueue, ...songIds])
+    );
+  }
+
+  function clearAutoQueue() {
+    setAutoQueue([]);
+    localStorage.setItem("autoQueue", JSON.stringify([]));
+  }
+
+  function pushToUserQueue(songIds: number[]) {
+    setUserQueue([...userQueue, ...songIds]);
+    localStorage.setItem(
+      "userQueue",
+      JSON.stringify([...userQueue, ...songIds])
+    );
+  }
+
+  async function playSong(songId: number) {
+    if (currentSongId) {
+      pushToHistory([currentSongId]);
+    }
+    setCurrentSongId(songId);
+    localStorage.setItem("currentSongId", songId.toString());
+    const songAudio = await window.songs.getSongAudio(songId);
+    player.src = `data:audio/mp3;base64,${songAudio}`;
+    safePlay();
+  }
+
+  async function skip() {
+    pushToHistory([currentSongId]);
+    let nextId;
+    if (userQueue.length > 0) {
+      nextId = userQueue[0];
+      setUserQueue(userQueue.slice(1));
+    } else if (autoQueue.length > 0) {
+      nextId = autoQueue[0];
+      setAutoQueue(autoQueue.slice(1));
+    } else {
+      // Handle case where there is no song to skip to
       return;
     }
-    // If there is a previous song, play it, else restart song
-    console.log(history);
+    setCurrentSongId(nextId);
+    localStorage.setItem("currentSongId", nextId.toString());
+    const songAudio = await window.songs.getSongAudio(nextId);
+    player.src = `data:audio/mp3;base64,${songAudio}`;
+    safePlay();
+  }
+
+  async function previous(): Promise<void> {
+    if (player.currentTime > 3) {
+      player.currentTime = 0;
+      return new Promise((resolve) => resolve(undefined));
+    }
     if (history.length > 0) {
       player.pause();
-      const previousSong = history[history.length - 1];
+      let songId = history[history.length - 1];
       setHistory(history.slice(0, history.length - 1));
-      setPlaylistIndex(playlistIndex - 1);
-      player.src = previousSong;
-      if (!paused) {
-        player.play();
-      }
+      setCurrentSongId(songId);
+      localStorage.setItem("currentSongId", songId.toString());
+      const songAudio = await window.songs.getSongAudio(songId);
+      player.src = `data:audio/mp3;base64,${songAudio}`;
+      safePlay();
     } else {
       player.currentTime = 0;
+      return new Promise((resolve) => resolve(undefined));
     }
+  }
+
+  function togglePlay() {
+    setPaused(!paused);
+  }
+
+  function toggleMute() {
+    setMuted(!muted);
+  }
+
+  function toggleLoop() {
+    localStorage.setItem("loop", JSON.stringify(!loop));
+    setLoop(!loop);
+  }
+
+  function toggleShuffle() {
+    localStorage.setItem("shuffle", JSON.stringify(!shuffle));
+    setShuffle(!shuffle);
   }
 
   // Get playlist from main process
   useEffect(() => {
-    async function getPlaylist() {
-      try {
-        const playlist = await window.playlists.getPlaylist(playlistName);
-        setPlaylist(playlist);
-
-        const songs = await window.songs.getSongsInPlaylist(playlistName);
-        setSongs(songs);
-
-        if (!songs || songs.length === 0) {
-          // disable buttons
-          return;
-        }
-        console.log(playlistIndex);
-        const songAudio = await window.songs.getSongAudio(
-          songs[playlistIndex].id
-        );
+    async function getCurrentAudio() {
+      if (currentSongId) {
+        const songAudio = await window.songs.getSongAudio(currentSongId);
         player.src = `data:audio/mp3;base64,${songAudio}`;
-      } catch (error) {
-        console.error(error);
       }
     }
-    player.pause();
-    localStorage.setItem("playlistName", playlistName);
-    getPlaylist();
-    if (!paused) {
-      player.play();
-    }
-  }, [playlistName]);
+    getCurrentAudio().then(() => {
+      if (!paused) {
+        safePlay();
+      }
+    });
+    setReady(true);
+  }, [currentSongId]);
 
   // When player is initialized, or src is changed, sync player with settings
   useEffect(() => {
-    console.log(player.readyState);
-    player.onloadedmetadata = () => {
-      setDuration(player.duration);
-    };
-    player.addEventListener("ended", () => {
-      console.log("ended");
-      setSongEnded(true);
+    player.addEventListener("ended", async () => {
+      await skip();
     });
-    player.volume = calcTotalVolume(sliderVolume, masterVolume);
-    player.muted = muted;
-  }, []);
+
+    // enqueue next song
+    async function autoQueueSongs(playlistName: string) {
+      const songs = await window.songs.getSongsInPlaylist(playlistName);
+      console.log("db returning songs:", songs)
+      pushToAutoQueue(songs.map((song: Song) => song.id));
+    }
+    if (autoQueue.length < 20) {
+      autoQueueSongs(currentPlaylistName);
+    }
+  }, [player.src]);
 
   // Controllers between player state and HTMLAudioElement object
   useEffect(() => {
@@ -277,47 +296,38 @@ export const PlayerProvider = ({ children }: PlayerProviderProps) => {
     if (paused) {
       player.pause();
     } else {
-      player.play();
+      safePlay();
     }
   }, [paused]);
-
-  useEffect(() => {
-    if (songEnded) {
-      playNextSong();
-      setSongEnded(false);
-    }
-  }, [songEnded]);
 
   return (
     <PlayerContext.Provider
       value={{
-        playlistName,
-        setPlaylistName,
-        playlist,
-        setPlaylist,
-        playlistIndex,
-        setPlaylistIndex,
+        pushToHistory,
+        clearHistory,
+        pushToAutoQueue,
+        clearAutoQueue,
+        pushToUserQueue,
+        playSong,
+        skip,
+        previous,
+        togglePlay,
+        toggleMute,
+        toggleLoop,
+        toggleShuffle,
         player,
-        setPlayer,
-        songs,
-        setSongs,
-        loop,
-        setLoop,
-        shuffle,
-        setShuffle,
-        paused,
-        setPaused,
+        currentSongId,
+        currentPlaylistName,
+        setCurrentPlaylistName,
         masterVolume,
         setMasterVolume,
         sliderVolume,
         setSliderVolume,
+        loop,
         muted,
-        setMuted,
-        duration,
-        setDuration,
-        playNextSong,
-        playPreviousSong,
-        jumpToSong,
+        shuffle,
+        paused,
+        ready,
       }}
     >
       {children}

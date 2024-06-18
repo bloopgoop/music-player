@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+// @ts-nocheck
+import { useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -19,26 +20,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Playlist } from "@/db/models";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuPortal,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
-import { set } from "react-hook-form";
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
+import { useUi } from "@/context/ui-provider";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -54,14 +53,15 @@ export function DataTable<TData, TValue>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [multiselect, setMultiselect] = useState(true);
+  const { toast } = useToast();
+  const { allPlaylists } = useUi();
   const table = useReactTable({
     data,
     columns,
-    meta: { playlist: playlist, hoveredRow: hoveredRow, playlists: playlists },
+    meta: { playlist: playlist, hoveredRow: hoveredRow, playlists: allPlaylists },
     getCoreRowModel: getCoreRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
@@ -82,29 +82,12 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  let res;
-
-  useEffect(() => {
-    async function getPlaylists() {
-      const playlists = await window.playlists.getAllPlaylists();
-      setPlaylists(playlists);
-    }
-    getPlaylists();
-  }, []);
-
-  // webhook to update playlists
-  useEffect(() => {
-    window.playlists.recieveAllPlaylists((res: Playlist[]) =>
-      setPlaylists(res)
-    );
-  }, [res]);
-
   async function addSongToPlaylist(playlist: string, songId: number) {
     await window.playlists.addSongToPlaylist(playlist, songId);
   }
 
   return (
-    <div className="rounded-md">
+    <div className="relative rounded-md">
       <div className="flex items-center py-4 justify-between">
         <Input
           placeholder="Filter by title..."
@@ -147,15 +130,24 @@ export function DataTable<TData, TValue>({
                               <DropdownMenuItem
                                 key={playlist.id}
                                 onClick={() => {
+                                  let count = 0;
                                   table
                                     .getFilteredSelectedRowModel()
                                     .rows.forEach((row) => {
-                                      console.log(row);
                                       addSongToPlaylist(
                                         playlist.name,
-                                        Number(row.id) + 1
+                                        row.original.id
                                       );
+                                      count++;
                                     });
+                                  setRowSelection({});
+                                  toast({
+                                    className:
+                                      "top-0 right-0 flex fixed md:max-w-[420px] md:top-4 md:right-4",
+                                    variant: "default",
+                                    title: "Success!",
+                                    description: `Added ${count} songs to ${playlist.name}`,
+                                  });
                                 }}
                               >
                                 <span>{playlist.name}</span>
@@ -165,28 +157,48 @@ export function DataTable<TData, TValue>({
                       </DropdownMenuSubContent>
                     </DropdownMenuPortal>
                   </DropdownMenuSub>
-                  <DropdownMenuItem>Delete</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      let count = 0;
+                      table
+                        .getFilteredSelectedRowModel()
+                        .rows.forEach((row) => {
+                          window.playlists.deleteSongFromPlaylist(
+                            playlist,
+                            row.original.id
+                          );
+                          count++;
+                        });
+                      setRowSelection({});
+                      toast({
+                        className:
+                          "top-0 right-0 flex fixed md:max-w-[420px] md:top-4 md:right-4",
+                        variant: "default",
+                        title: "Success!",
+                        description: `Deleted ${count} songs from ${playlist}`,
+                      });
+                    }}
+                  >
+                    Delete
+                  </DropdownMenuItem>
                 </>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
         </div>
       </div>
-      <Table style={{ tableLayout: "fixed"}}>
-        <TableHeader >
+      <Table style={{ tableLayout: "fixed" }}>
+        <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
-                console.log(header)
-                console.log(header.getSize())
                 return (
                   <TableHead
-                    {...{
-                      key: header.id,
-                      colSpan: header.colSpan,
-                      style: {
-                        width: header.id != "title" ? `${header.getSize()}px` : `100%`,
-                      },
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    style={{
+                      width:
+                        header.id != "title" ? `${header.getSize()}px` : `100%`,
                     }}
                   >
                     {header.isPlaceholder
@@ -226,6 +238,7 @@ export function DataTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
+      <Toaster />
     </div>
   );
 }

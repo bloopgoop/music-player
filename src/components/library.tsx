@@ -5,34 +5,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState, useEffect, useReducer, useContext } from "react";
+import { useContext } from "react";
 import { UiContext } from "@/context/ui-provider";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { useNavigate } from "react-router-dom";
-import { Playlist } from "@/db/models";
 import Image from "@/components/image";
 import "@/index.css";
 
 const Library = () => {
   const navigate = useNavigate();
   const ui = useContext(UiContext);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  let data;
-
-  useEffect(() => {
-    async function getPlaylists() {
-      const playlists = await window.playlists.getAllPlaylists();
-      setPlaylists(playlists);
-    }
-    getPlaylists();
-  }, []);
-
-  // webhook to update playlists
-  useEffect(() => {
-    window.playlists.recieveAllPlaylists((data: Playlist[]) =>
-      setPlaylists(data)
-    );
-  }, [data]);
 
   const toggleSidebar = () => {
     // Remove auto resize
@@ -42,7 +24,6 @@ const Library = () => {
 
   const createPlaylist = async () => {
     const newPlaylist = await window.playlists.createPlaylist();
-    setPlaylists([...playlists, newPlaylist]);
   };
 
   return (
@@ -80,7 +61,7 @@ const Library = () => {
         options={{ scrollbars: { autoHide: "leave" } }}
         defer
       >
-        {playlists.map((playlist) => (
+        {ui.allPlaylists?.map((playlist) => (
           <div
             onClick={() =>
               navigate(`/playlist`, { state: { playlistName: playlist.name } })

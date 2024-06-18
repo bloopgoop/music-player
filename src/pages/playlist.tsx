@@ -47,34 +47,44 @@ import { Button, ButtonProps } from "@/components/ui/button";
 import { usePlayer } from "@/context/player-provider";
 import { DataTable } from "@/components/playlist/dataTable";
 import { columns } from "@/components/playlist/columns";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AspectRatio } from "@radix-ui/react-aspect-ratio";
 
 interface PlaylistPlayButtonProps extends ButtonProps {
   playlist: string;
+  firstSongId: number;
   width?: number;
   height?: number;
 }
 
 const PlaylistPlayButton: React.FC<PlaylistPlayButtonProps> = ({
   playlist,
+  firstSongId,
   ...props
 }) => {
-  const { paused, setPaused, playlistName, setPlaylistName, jumpToSong } =
-    usePlayer();
+  const {
+    paused,
+    togglePlay,
+    currentPlaylistName,
+    setCurrentPlaylistName,
+    playSong,
+    clearHistory
+  } = usePlayer();
 
   const playPlaylist = () => {
-    if (playlist === playlistName) {
-      setPaused(!paused);
+    if (playlist === currentPlaylistName) {
+      togglePlay();
       return;
     } else {
-      setPlaylistName(playlist);
-      jumpToSong(0);
-      setPaused(false);
+      setCurrentPlaylistName(playlist);
+      clearHistory();
+      playSong(firstSongId);
     }
   };
 
   return (
-    <Button onClick={playPlaylist} {...props}>
-      {playlist === playlistName && !paused ? (
+    <Button onClick={() => playPlaylist()} {...props}>
+      {playlist === currentPlaylistName && !paused ? (
         <PauseIcon width={20} height={20} className="text-primary" />
       ) : (
         <PlayIcon width={20} height={20} className="text-primary" />
@@ -90,6 +100,7 @@ const Playlist = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function getPlaylist() {
@@ -102,14 +113,25 @@ const Playlist = () => {
       );
       setSongs(songs);
     }
-    getPlaylist();
+    getPlaylist().then(() => setIsLoading(false));
   }, [location.state]);
+
+    // webhook to update playlists
+    useEffect(() => {
+      window.playlists.recievePlaylistUpdate((data: Song[]) =>
+        setSongs(data)
+      );
+      console.log("Songs updated");
+    }, [songs]);
 
   async function deletePlaylist() {
     const id = await window.playlists.deletePlaylist(playlist?.id);
     navigate("/");
   }
 
+  if (isLoading) {
+    return <LoadingPlaylist />;
+  }
   return (
     <div className="h-full flex flex-col">
       <header
@@ -136,6 +158,7 @@ const Playlist = () => {
         <div className="flex flex-row gap-6 py-3 items-center border-b">
           <PlaylistPlayButton
             playlist={playlist?.name}
+            firstSongId={songs[0]?.id}
             className="p-3.5 bg-accent hover:bg-accent-foreground"
             variant="default"
             size="icon"
@@ -206,6 +229,7 @@ const Playlist = () => {
             isEditDialogOpen={isEditDialogOpen}
             setIsEditDialogOpen={setIsEditDialogOpen}
             playlist={playlist}
+            key={playlist?.id}
           />
         </div>
         <OverlayScrollbarsComponent
@@ -223,3 +247,51 @@ const Playlist = () => {
   );
 };
 export default Playlist;
+
+const LoadingPlaylist = () => {
+  return (
+    <div className="h-full flex flex-col">
+      <header
+        className="p-3 flex flex-row text-2xl font-bold gap-6 pb-6"
+        style={{
+          boxShadow: "inset 0px -33px 54px -67px rgba(0,0,0,1)",
+        }}
+      >
+        <div className="min-w-24 max-w-64 w-1/4 flex-shrink-0 shadow-xl">
+          <AspectRatio ratio={1 / 1}>
+            <Skeleton className="h-full w-full" />
+          </AspectRatio>
+        </div>
+        <Skeleton />
+        <div className="my-3 flex-1">
+          <Skeleton className="h-4 w-40"/>
+          <div className="text-muted-foreground text-sm">
+            <Skeleton className="h-2 w-20 mt-2"/>
+          </div>
+        </div>
+      </header>
+      <div className="p-3 flex-1 flex flex-col overflow-hidden" style={{}}>
+        <div className="flex flex-row gap-6 py-3 items-center border-b">
+          <Skeleton className="h-10 w-10 rounded-full"/>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger className="flex items-center justify-center w-10 h-10 p-2.5 rounded-full hover:bg-muted/50 active:translate-y-[1px] active:scale-95">
+                <ShuffleIcon />
+              </TooltipTrigger>
+              <TooltipContent>Shuffle</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger className="flex items-center justify-center w-10 h-10 p-2.5 rounded-full hover:bg-muted/50 active:translate-y-[1px] active:scale-95">
+                <LoopIcon />
+              </TooltipTrigger>
+              <TooltipContent>Loop</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Skeleton />
+        </div>
+      </div>
+    </div>
+  );
+};

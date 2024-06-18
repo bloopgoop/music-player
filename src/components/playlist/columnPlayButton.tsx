@@ -4,54 +4,56 @@ import React from "react";
 
 interface PlayButtonProps {
   playlist?: string;
-  index?: number;
+  songId?: number;
   width?: number;
   height?: number;
 }
 
 const PlayButton: React.FC<PlayButtonProps> = ({
   playlist,
-  index,
+  songId,
   width = 15,
   height = 15,
 }) => {
   const {
     paused,
-    setPaused,
-    playlistName,
-    setPlaylistName,
-    jumpToSong,
-    playlistIndex,
+    togglePlay,
+    currentPlaylistName,
+    currentSongId,
+    setCurrentPlaylistName,
+    playSong,
+    clearAutoQueue,
   } = usePlayer();
 
-  console.log("playbutton rerender")
+  console.log("playbutton rerender", currentPlaylistName)
   const handleDifferentPlaylist = () => {
     console.log("setting playlist name", playlist);
-    setPlaylistName(playlist);
-    if (index !== undefined) {
-      jumpToSong(index);
+    setCurrentPlaylistName(playlist);
+    localStorage.setItem("currentPlaylistName", playlist);
+    if (songId !== undefined) {
+      playSong(songId);
     }
-    setPaused(false);
   };
 
   const handleSamePlaylistDifferentSong = () => {
-    console.log("jumping to song", index);
-    jumpToSong(index);
-    setPaused(false);
+    console.log("jumping to song", songId);
+    playSong(songId);
   };
 
-  const playSong = () => {
-    if (playlist && playlistName !== playlist) {
+  const play = () => {
+    console.log("in play function", currentPlaylistName)
+    if (playlist && currentPlaylistName !== playlist) {
+      clearAutoQueue();
       handleDifferentPlaylist();
-    } else if (index !== playlistIndex) {
+    } else if (songId !== currentSongId) {
       handleSamePlaylistDifferentSong();
     } else {
-      setPaused(!paused);
+      togglePlay();
     }
   };
 
   const renderIcon = () => (
-    playlist === playlistName && index === playlistIndex && !paused ? (
+    playlist === currentPlaylistName && songId === currentSongId && !paused ? (
       <PauseIcon width={width} height={height} className="text-primary" />
     ) : (
       <PlayIcon width={width} height={height} className="text-primary" />
@@ -60,7 +62,7 @@ const PlayButton: React.FC<PlayButtonProps> = ({
 
   return (
     <div
-      onClick={playSong}
+      onClick={() => play()}
       role="button"
       tabIndex={0}
       className="hover:cursor-pointer"

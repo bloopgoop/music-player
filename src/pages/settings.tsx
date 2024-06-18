@@ -1,5 +1,6 @@
 import { useUi } from "@/context/ui-provider";
 import { usePlayer } from "@/context/player-provider";
+import { useSettings } from "@/context/settings-provider";
 import {
   Select,
   SelectContent,
@@ -17,6 +18,7 @@ type Theme = "light" | "dark" | "system";
 const Settings = () => {
   const ui = useUi();
   const player = usePlayer();
+  const settings = useSettings();
 
   return (
     <div className="p-3 h-full w-full flex flex-col">
@@ -62,6 +64,15 @@ const Settings = () => {
         <Label>Airplane Mode</Label>
         <Switch />
         <div></div>
+
+        <Label>Album reflection</Label>
+        <Switch
+          onCheckedChange={() => {
+            localStorage.setItem("reflection", String(!settings.reflection));
+            settings.setReflection(!settings.reflection);
+          }}
+          checked={settings.reflection}
+        />
       </div>
     </div>
   );

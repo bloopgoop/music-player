@@ -8,11 +8,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const LoopButton = () => {
-  const { loop, setLoop } = usePlayer();
-  const toggleLoop = () => {
-    setLoop(!loop);
-    localStorage.setItem("loop", JSON.stringify(!loop));
-  };
+  const { loop, toggleLoop } = usePlayer();
   return (
     <>
       <TooltipProvider>

@@ -1,18 +1,18 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 
 type SettingsContextType = {
-  masterVolume: number;
-  setMasterVolume: React.Dispatch<React.SetStateAction<number>>;
+  reflection?: boolean;
+  setReflection?: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 const initialSettingsContext: SettingsContextType = {
-  masterVolume: 0.5,
-  setMasterVolume: () => {},
+  reflection: true,
+  setReflection: () => {},
 };
 
 type SettingsProviderState = {
-  masterVolume: number;
-  setMasterVolume: (volume: number) => void;
+  reflection?: boolean;
+  setReflection?: (reflection: boolean) => void;
 };
 
 type SettingsProviderProps = {
@@ -25,11 +25,15 @@ export const SettingsProvider = ({
   children,
   ...props
 }: SettingsProviderProps) => {
-  const [masterVolume, setMasterVolume] = useState(0.5);
+  const [reflection, setReflection] = useState(
+    localStorage.getItem("reflection")
+      ? JSON.parse(localStorage.getItem("reflection")!)
+      : true
+  );
 
   const value: SettingsProviderState = {
-    masterVolume,
-    setMasterVolume,
+    reflection,
+    setReflection,
   };
 
   return (

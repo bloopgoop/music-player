@@ -8,10 +8,7 @@ import { Button } from "@/components/ui/button";
 import { usePlayer } from "@/context/player-provider";
 
 const MuteButton = () => {
-  const { sliderVolume, muted, setMuted } = usePlayer();
-  const toggleMute = () => {
-    setMuted(!muted);
-  };
+  const { sliderVolume, muted, toggleMute } = usePlayer();
   return (
     <Button variant="ghost" size="icon" onClick={toggleMute}>
       {muted ? (

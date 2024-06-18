@@ -19,8 +19,6 @@ import Error from "./pages/error";
 import Settings from "./pages/settings";
 import "./index.css";
 
-import DemoPage from "./components/playlist";
-
 const AppContent = () => {
   const ui = useContext(UiContext);
 
@@ -47,20 +45,25 @@ const AppContent = () => {
         >
           <section
             id="navbox"
-            className="flex flex-row items-center justify-center p-1 rounded-lg bg-card overflow-hidden"
+            className="flex flex-row items-center justify-evenly p-1 rounded-lg bg-card overflow-hidden"
           >
-            <Link to="/">
-              <HomeIcon width={30} height={30} />
-            </Link>
-            <Link to="/dropbox">
-              <DownloadIcon width={30} height={30} />
-            </Link>
-            <Link to="/settings">
-              <GearIcon width={30} height={30} />
-            </Link>
-            <Link to="/demo">
-              <GearIcon width={30} height={30} />
-            </Link>
+            {ui.sidebarCollapsed ? (
+              <Link to="/">
+                <HomeIcon width={30} height={30} />
+              </Link>
+            ) : (
+              <div className="w-full flex flex-row items-center justify-evenly p-1 rounded-lg bg-card overflow-hidden">
+                <Link to="/">
+                  <HomeIcon width={30} height={30} />
+                </Link>
+                <Link to="/dropbox">
+                  <DownloadIcon width={30} height={30} />
+                </Link>
+                <Link to="/settings">
+                  <GearIcon width={30} height={30} />
+                </Link>
+              </div>
+            )}
           </section>
           <Library />
         </div>
@@ -109,10 +112,6 @@ const router = createHashRouter([
       {
         path: "settings",
         element: <Settings />,
-      },
-      {
-        path: "demo",
-        element: <DemoPage />,
       },
     ],
   },

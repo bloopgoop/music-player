@@ -9,6 +9,10 @@ contextBridge.exposeInMainWorld("songs", {
   registerSongs: (args: any) => ipcRenderer.send("register songs", args),
   getSongAudio: (id: number) => ipcRenderer.invoke("get song audio", id),
   getSongsInPlaylist: (playlistName: string) => ipcRenderer.invoke("get songs in playlist", playlistName),
+  getSongMetadata: (id: number) => ipcRenderer.invoke("get song metadata", id),
+  editSong(id: number, args: any) {
+    ipcRenderer.invoke("edit song", id, args);
+  }
 });
 
 contextBridge.exposeInMainWorld("playlists", {
@@ -25,4 +29,7 @@ contextBridge.exposeInMainWorld("playlists", {
 
   addSongToPlaylist: (playlistName: string, songId: number) => ipcRenderer.invoke("add song to playlist", playlistName, songId),
   deleteSongFromPlaylist: (playlistName: string, songId: number) => ipcRenderer.invoke("delete song from playlist", playlistName, songId),
+  recievePlaylistUpdate: (callback: Function) => {
+    ipcRenderer.on("recieve playlist update", (event, data) => callback(data));
+  }
 });

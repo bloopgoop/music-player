@@ -3,17 +3,13 @@ import { Button } from "@/components/ui/button";
 import { usePlayer } from "@/context/player-provider";
 
 const PlayButton = () => {
-  const { paused, setPaused, playlistName, setPlaylistName } = usePlayer();
-
-  const togglePause = () => {
-    setPaused(!paused);
-  };
+  const { togglePlay, paused } = usePlayer();
 
   return (
     <Button
       variant="default"
       size="icon"
-      onClick={togglePause}
+      onClick={togglePlay}
       className="hover:scale-105"
     >
       {paused ? (
