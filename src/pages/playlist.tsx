@@ -68,7 +68,8 @@ const PlaylistPlayButton: React.FC<PlaylistPlayButtonProps> = ({
     currentPlaylistName,
     setCurrentPlaylistName,
     playSong,
-    clearHistory
+    clearHistory,
+    clearAutoQueue,
   } = usePlayer();
 
   const playPlaylist = () => {
@@ -78,12 +79,13 @@ const PlaylistPlayButton: React.FC<PlaylistPlayButtonProps> = ({
     } else {
       setCurrentPlaylistName(playlist);
       clearHistory();
+      clearAutoQueue();
       playSong(firstSongId);
     }
   };
 
   return (
-    <Button onClick={() => playPlaylist()} {...props}>
+    <Button onClick={playPlaylist} {...props}>
       {playlist === currentPlaylistName && !paused ? (
         <PauseIcon width={20} height={20} className="text-primary" />
       ) : (
@@ -116,13 +118,11 @@ const Playlist = () => {
     getPlaylist().then(() => setIsLoading(false));
   }, [location.state]);
 
-    // webhook to update playlists
-    useEffect(() => {
-      window.playlists.recievePlaylistUpdate((data: Song[]) =>
-        setSongs(data)
-      );
-      console.log("Songs updated");
-    }, [songs]);
+  // webhook to update playlists
+  useEffect(() => {
+    window.playlists.recievePlaylistUpdate((data: Song[]) => setSongs(data));
+    console.log("Songs updated");
+  }, [songs]);
 
   async function deletePlaylist() {
     const id = await window.playlists.deletePlaylist(playlist?.id);
@@ -211,9 +211,9 @@ const Playlist = () => {
                 <DialogTitle>Are you absolutely sure?</DialogTitle>
                 <DialogDescription>
                   This action cannot be undone. This will remove{" "}
-                  <div className="text-bold text-primary inline">
+                  <span className="text-bold text-primary">
                     {location.state.playlistName}
-                  </div>{" "}
+                  </span>{" "}
                   from your library.
                 </DialogDescription>
               </DialogHeader>
@@ -264,15 +264,15 @@ const LoadingPlaylist = () => {
         </div>
         <Skeleton />
         <div className="my-3 flex-1">
-          <Skeleton className="h-4 w-40"/>
+          <Skeleton className="h-4 w-40" />
           <div className="text-muted-foreground text-sm">
-            <Skeleton className="h-2 w-20 mt-2"/>
+            <Skeleton className="h-2 w-20 mt-2" />
           </div>
         </div>
       </header>
       <div className="p-3 flex-1 flex flex-col overflow-hidden" style={{}}>
         <div className="flex flex-row gap-6 py-3 items-center border-b">
-          <Skeleton className="h-10 w-10 rounded-full"/>
+          <Skeleton className="h-10 w-10 rounded-full" />
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger className="flex items-center justify-center w-10 h-10 p-2.5 rounded-full hover:bg-muted/50 active:translate-y-[1px] active:scale-95">

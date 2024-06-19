@@ -8,15 +8,14 @@ import {
 } from "@/components/ui/tooltip";
 
 const PrevButton = () => {
-  const { previous, ready } = usePlayer();
+  const player = usePlayer();
   return (
     <>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger
             className="w-8 h-8 p-2 rounded-full hover:bg-card active:translate-y-[1px] active:scale-95"
-            onClick={previous}
-            disabled={!ready}
+            onClick={player.previous}
           >
             <TrackPreviousIcon />
           </TooltipTrigger>

@@ -1,4 +1,5 @@
 import vinyl from "@/assets/vinyl.png";
+import placeholder from "@/assets/placeholder.png";
 import { cn } from "@/lib/utils";
 import { AspectRatio } from "@radix-ui/react-aspect-ratio";
 import { useSettings } from "@/context/settings-provider";
@@ -20,11 +21,12 @@ export const Vinyl = ({
       id="album"
       className="relative shadow-2xl"
       style={{ height: `${size}px`, width: `${size}px` }}
+      {...props}
     >
       <AspectRatio ratio={1 / 1}>
         <img
           id="cover"
-          src={albumSrc}
+          src={albumSrc ? albumSrc : placeholder}
           alt="cover"
           className="absolute top-0 left-0 z-10 rounded"
           height={size}

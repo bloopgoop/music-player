@@ -12,7 +12,8 @@ contextBridge.exposeInMainWorld("songs", {
   getSongMetadata: (id: number) => ipcRenderer.invoke("get song metadata", id),
   editSong(id: number, args: any) {
     ipcRenderer.invoke("edit song", id, args);
-  }
+  },
+  getSongsInQueue: (queue: number[]) => ipcRenderer.invoke("get songs in queue", queue),
 });
 
 contextBridge.exposeInMainWorld("playlists", {
@@ -31,5 +32,6 @@ contextBridge.exposeInMainWorld("playlists", {
   deleteSongFromPlaylist: (playlistName: string, songId: number) => ipcRenderer.invoke("delete song from playlist", playlistName, songId),
   recievePlaylistUpdate: (callback: Function) => {
     ipcRenderer.on("recieve playlist update", (event, data) => callback(data));
-  }
+  },
+  getSongIds: (playlistName: string) => ipcRenderer.invoke("get song ids", playlistName),
 });

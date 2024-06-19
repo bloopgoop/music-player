@@ -7,9 +7,10 @@ declare global {
         songs: {
             registerSongs: (args: any) => void;
             getSongAudio: (id: number) => Promise<string>;
-            getSongsInPlaylist: (playlistName: string) => Promise<Song[]>;
             getSongMetadata: (id: number) => Promise<Song>;
+            getSongsInPlaylist: (playlistName: string) => Promise<Song[]>;
             editSong: (id: number, args: any) => Promise<number>;
+            getSongsInQueue: (queue: number[]) => Promise<Song[]>;
         };
         playlists: {
             createPlaylist: () => Promise<Playlist>;
@@ -21,6 +22,7 @@ declare global {
             addSongToPlaylist: (playlistName: string, songId: number) => Promise<void>;
             deleteSongFromPlaylist: (playlistName: string, songId: number) => Promise<void>;
             recievePlaylistUpdate: (callback: Function) => void;
+            getSongIds: (playlistName: string) => Promise<number[]>
         };
     }
 }

@@ -22,15 +22,11 @@ import "./index.css";
 const AppContent = () => {
   const ui = useContext(UiContext);
 
-  useEffect(() => {
-    console.log(ui);
-  }, [ui]);
-
   return (
     <div className="bg-background w-full">
       <div
         className={
-          "body-height h-full grid gap-2 p-2 " +
+          "body-height h-full w-full grid gap-2 p-2 overflow-hidden " +
           (ui.autoResize
             ? "lg:grid-cols-[25fr_75fr] sm:grid-cols-[90px_1fr] "
             : " ") +
@@ -69,7 +65,7 @@ const AppContent = () => {
         </div>
         <section
           id="main"
-          className="bg-card h-full rounded-lg overflow-hidden"
+          className="bg-card h-full rounded-lg overflow-hidden w-full"
         >
           <Outlet />
         </section>

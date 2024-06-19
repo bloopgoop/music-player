@@ -359,3 +359,23 @@ export function deleteSongFromPlaylist(
     );
   });
 }
+
+export function getSongIds(
+  db: sqlite3.Database,
+  playlistName: string
+): Promise<number[]> {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT song_id FROM playlist_songs WHERE playlist_id = (SELECT id FROM playlists WHERE name = ?)`,
+      [playlistName],
+      (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          const songIds = rows.map((row: Playlist_Song) => row.song_id);
+          resolve(songIds);
+        }
+      }
+    );
+  });
+}

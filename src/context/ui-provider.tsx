@@ -122,6 +122,7 @@ export const UiProvider = ({
     window.playlists.recieveAllPlaylists((data: Playlist[]) =>
       setAllPlaylists(data)
     );
+    console.log("Playlists updated")
   }, [data]);
 
   const value = {

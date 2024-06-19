@@ -153,7 +153,9 @@ ipcMain.handle("get song metadata", async (event, id: number) => {
  */
 ipcMain.handle("edit song", async (event, id: number, args: any) => {
   const original_song = await crud.getSongByID(testdb, id);
-  const imageBuffer = args.image ? fs.readFileSync(args.image).toString("base64") : undefined;
+  const imageBuffer = args.image
+    ? fs.readFileSync(args.image).toString("base64")
+    : undefined;
   const imageMime = args.image ? mime.getType(args.image) : undefined;
   const song = new Object({
     path: args.path ? args.path : original_song.path,
@@ -168,8 +170,20 @@ ipcMain.handle("edit song", async (event, id: number, args: any) => {
   }) as Song;
   const songId = await crud.editSong(testdb, song);
   return songId;
-}
-);
+});
+
+/**
+ * Get all songs in a queue
+ * @param queue - list of song ids
+ * @returns - list of song objects
+ */
+ipcMain.handle("get songs in queue", async (event, queue: number[]) => {
+  const songs = [];
+  for (var i = 0; i < queue.length; i++) {
+    songs.push(await crud.getSongByID(testdb, queue[i]));
+  }
+  return songs;
+});
 
 /**
  * Create a new playlist
@@ -180,6 +194,10 @@ ipcMain.handle("create playlist", async (event) => {
   console.log("Creating playlist: " + playlistName);
   const id = await crud.createPlaylist(testdb, playlistName);
   const playlist = await crud.getPlaylistByID(testdb, id);
+  event.sender.send(
+    "recieve all playlists",
+    await crud.getAllPlaylists(testdb)
+  );
   return playlist;
 });
 
@@ -221,8 +239,12 @@ ipcMain.handle("delete playlist", async (event, id: number) => {
  */
 ipcMain.handle("edit playlist", async (event, args: any) => {
   console.log(args);
-  const imageBuffer = args.imageFilePath ? fs.readFileSync(args.imageFilePath).toString("base64") : undefined;
-  const imageMime = args.imageFilePath ? mime.getType(args.imageFilePath) : undefined;
+  const imageBuffer = args.imageFilePath
+    ? fs.readFileSync(args.imageFilePath).toString("base64")
+    : undefined;
+  const imageMime = args.imageFilePath
+    ? mime.getType(args.imageFilePath)
+    : undefined;
   console.log(imageMime);
   const playlist = new Object({
     name: args.name,
@@ -260,6 +282,18 @@ ipcMain.handle(
   "delete song from playlist",
   async (event, playlistName: string, songId: number) => {
     await crud.deleteSongFromPlaylist(testdb, playlistName, songId);
-    event.sender.send("recieve playlist update", await crud.getSongsInPlaylist(testdb, playlistName));
+    event.sender.send(
+      "recieve playlist update",
+      await crud.getSongsInPlaylist(testdb, playlistName)
+    );
   }
 );
+
+/**
+ * Get song ids given a playlist name
+ * @param {string} playlistName
+ * @returns {number[]}
+ */
+ipcMain.handle("get song ids", async (event, playlistName: string) => {
+  return await crud.getSongIds(testdb, playlistName)
+});

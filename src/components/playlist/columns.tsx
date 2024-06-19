@@ -136,6 +136,7 @@ export const columns: ColumnDef<Song>[] = [
     header: "",
     size: 60,
     cell: ({ row, table }) => {
+      const player = usePlayer();
       const [isEditSong, setIsEditDialogOpen] = useState(false);
 
       async function addSongToPlaylist(playlistName: string, songId: number) {
@@ -157,7 +158,15 @@ export const columns: ColumnDef<Song>[] = [
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Options</DropdownMenuLabel>
-                <DropdownMenuItem>Add to queue</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    player.pushToUserQueue([
+                      table.options.data[Number(row.id)].id,
+                    ])
+                  }
+                >
+                  Add to queue
+                </DropdownMenuItem>
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuSub>
@@ -206,7 +215,10 @@ export const columns: ColumnDef<Song>[] = [
                 </>
               </DropdownMenuContent>
             </DropdownMenu>
-            <EditSongModal key={row.id} song={table.options.data[Number(row.id)]} />
+            <EditSongModal
+              key={row.id}
+              song={table.options.data[Number(row.id)]}
+            />
           </Dialog>
         </div>
       );
