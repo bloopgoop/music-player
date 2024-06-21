@@ -158,7 +158,7 @@ export function editSong(db: sqlite3.Database, song: Song): Promise<number> {
                         artist = ?, 
                         album = ?, 
                         genre = ?, 
-                        year = ?, 
+                        year = ? 
                         WHERE id = ?`,
       [
         song.path,
@@ -374,6 +374,25 @@ export function getSongIds(
         } else {
           const songIds = rows.map((row: Playlist_Song) => row.song_id);
           resolve(songIds);
+        }
+      }
+    );
+  });
+}
+
+export function incrementListens(
+  db: sqlite3.Database,
+  id: number
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE songs SET listens = listens + 1 WHERE id = ?`,
+      [id],
+      function (err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(id);
         }
       }
     );

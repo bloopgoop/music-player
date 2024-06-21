@@ -11,6 +11,7 @@ declare global {
             getSongsInPlaylist: (playlistName: string) => Promise<Song[]>;
             editSong: (id: number, args: any) => Promise<number>;
             getSongsInQueue: (queue: number[]) => Promise<Song[]>;
+            incrementListens: (id: number) => Promise<number>;
         };
         playlists: {
             createPlaylist: () => Promise<Playlist>;

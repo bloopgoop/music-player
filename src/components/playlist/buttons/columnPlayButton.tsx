@@ -25,25 +25,21 @@ const PlayButton: React.FC<PlayButtonProps> = ({
     clearAutoQueue,
   } = usePlayer();
 
-  console.log("playbutton rerender", currentPlaylistName)
   const handleDifferentPlaylist = () => {
-    console.log("setting playlist name", playlist);
     setCurrentPlaylistName(playlist);
-    localStorage.setItem("currentPlaylistName", playlist);
+    clearAutoQueue();
     if (songId !== undefined) {
       playSong(songId);
     }
   };
 
   const handleSamePlaylistDifferentSong = () => {
-    console.log("jumping to song", songId);
+    clearAutoQueue();
     playSong(songId);
   };
 
   const play = () => {
-    console.log("in play function", currentPlaylistName)
     if (playlist && currentPlaylistName !== playlist) {
-      clearAutoQueue();
       handleDifferentPlaylist();
     } else if (songId !== currentSongId) {
       handleSamePlaylistDifferentSong();

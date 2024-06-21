@@ -32,7 +32,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import PlayButton from "./columnPlayButton";
+import PlayButton from "./buttons/columnPlayButton";
 import { usePlayer } from "@/context/player-provider";
 import Image from "@/components/image";
 import { useMemo, useState } from "react";
@@ -137,7 +137,7 @@ export const columns: ColumnDef<Song>[] = [
     size: 60,
     cell: ({ row, table }) => {
       const player = usePlayer();
-      const [isEditSong, setIsEditDialogOpen] = useState(false);
+      const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
       async function addSongToPlaylist(playlistName: string, songId: number) {
         await window.playlists.addSongToPlaylist(playlistName, songId);
@@ -151,75 +151,75 @@ export const columns: ColumnDef<Song>[] = [
       }
       return (
         <div className="flex justify-center items-center">
-          <Dialog>
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <DotsHorizontalIcon className="text-center" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Options</DropdownMenuLabel>
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <DotsHorizontalIcon className="text-center" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Options</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() =>
+                  player.pushToUserQueue([
+                    table.options.data[Number(row.id)].id,
+                  ])
+                }
+              >
+                Add to queue
+              </DropdownMenuItem>
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <span>Add to playlist</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      {table.options.meta.playlists &&
+                        table.options.meta.playlists.map((playlist) => {
+                          if (
+                            playlist.name === "All songs" ||
+                            playlist.name === table.options.meta.playlist
+                          )
+                            return null;
+                          return (
+                            <DropdownMenuItem
+                              key={playlist.id}
+                              onClick={() =>
+                                addSongToPlaylist(
+                                  playlist.name,
+                                  table.options.data[Number(row.id)].id
+                                )
+                              }
+                            >
+                              <span>{playlist.name}</span>
+                            </DropdownMenuItem>
+                          );
+                        })}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+                <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                  Edit
+                </DropdownMenuItem>
+
                 <DropdownMenuItem
                   onClick={() =>
-                    player.pushToUserQueue([
-                      table.options.data[Number(row.id)].id,
-                    ])
+                    deleteSongFromPlaylist(
+                      row.original.id
+                    )
                   }
                 >
-                  Add to queue
+                  Delete
                 </DropdownMenuItem>
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <span>Add to playlist</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                      <DropdownMenuSubContent>
-                        {table.options.meta.playlists &&
-                          table.options.meta.playlists.map((playlist) => {
-                            if (
-                              playlist.name === "All songs" ||
-                              playlist.name === table.options.meta.playlist
-                            )
-                              return null;
-                            return (
-                              <DropdownMenuItem
-                                key={playlist.id}
-                                onClick={() =>
-                                  addSongToPlaylist(
-                                    playlist.name,
-                                    table.options.data[Number(row.id)].id
-                                  )
-                                }
-                              >
-                                <span>{playlist.name}</span>
-                              </DropdownMenuItem>
-                            );
-                          })}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
-                  <DialogTrigger asChild>
-                    <DropdownMenuItem>Edit</DropdownMenuItem>
-                  </DialogTrigger>
-
-                  <DropdownMenuItem
-                    onClick={() =>
-                      deleteSongFromPlaylist(
-                        table.options.data[Number(row.id)].id
-                      )
-                    }
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                </>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <EditSongModal
-              key={row.id}
-              song={table.options.data[Number(row.id)]}
-            />
-          </Dialog>
+              </>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <EditSongModal
+            key={row.id}
+            song={row.original}
+            isOpen={isEditDialogOpen}
+            setIsOpen={setIsEditDialogOpen}
+          />
         </div>
       );
     },

@@ -79,12 +79,12 @@ const Dropbox = () => {
     fileInputRef.current.files = e.dataTransfer.files;
   };
 
-  function registerSongs(values: z.infer<typeof DropboxSchema>) {
+  async function registerSongs(values: z.infer<typeof DropboxSchema>) {
     // Get file paths from FileList object
     const filePaths = Object.keys(values.files).map(
       (key) => values.files.item(Number(key)).path
     );
-    window.songs.registerSongs({
+    await window.songs.registerSongs({
       filePaths: filePaths, // send file paths to main process
     });
   }

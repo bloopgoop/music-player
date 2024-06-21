@@ -5,11 +5,16 @@ import {
   Outlet,
   Link,
 } from "react-router-dom";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
 import { useEffect, useContext } from "react";
 import { UiProvider, UiContext } from "./context/ui-provider";
 import { PlayerProvider } from "./context/player-provider";
 import { SettingsProvider } from "./context/settings-provider";
-import { HomeIcon, DownloadIcon, GearIcon } from "@radix-ui/react-icons";
+import { HomeIcon, DownloadIcon, GearIcon, AvatarIcon } from "@radix-ui/react-icons";
 import Dropbox from "./pages/dropbox";
 import Player from "./components/player";
 import Library from "./components/library";
@@ -17,7 +22,10 @@ import Playlist from "./pages/playlist";
 import Home from "./pages/home";
 import Error from "./pages/error";
 import Settings from "./pages/settings";
+import Stats from "./pages/stats";
 import "./index.css";
+
+const queryClient = new QueryClient();
 
 const AppContent = () => {
   const ui = useContext(UiContext);
@@ -58,6 +66,9 @@ const AppContent = () => {
                 <Link to="/settings">
                   <GearIcon width={30} height={30} />
                 </Link>
+                <Link to="/stats">
+                  <AvatarIcon width={30} height={30} />
+                </Link>
               </div>
             )}
           </section>
@@ -77,13 +88,15 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <SettingsProvider>
-      <PlayerProvider>
-        <UiProvider>
-          <AppContent />
-        </UiProvider>
-      </PlayerProvider>
-    </SettingsProvider>
+    <QueryClientProvider client={queryClient}>
+      <SettingsProvider>
+        <PlayerProvider>
+          <UiProvider>
+            <AppContent />
+          </UiProvider>
+        </PlayerProvider>
+      </SettingsProvider>
+    </QueryClientProvider>
   );
 };
 
@@ -109,6 +122,10 @@ const router = createHashRouter([
         path: "settings",
         element: <Settings />,
       },
+      {
+        path: "stats",
+        element: <Stats />,
+      }
     ],
   },
 ]);

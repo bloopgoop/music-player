@@ -21,14 +21,14 @@ const Image = ({
         <img
           src={`data:${mime};base64,${buffer}`}
           alt={alt}
-          className={cn("rounded-lg", className)}
+          className={cn("rounded-lg object-cover h-full w-full", className)}
           {...props}
         />
       ) : (
         <img
           src={Placeholder}
           alt="placeholder"
-          className={cn("rounded-lg", className)}
+          className={cn("rounded-lg object-cover h-full w-full", className)}
           {...props}
         />
       )}

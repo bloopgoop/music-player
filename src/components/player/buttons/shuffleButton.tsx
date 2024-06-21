@@ -1,21 +1,34 @@
 import { ShuffleIcon } from "@radix-ui/react-icons";
-import { usePlayer } from "@/context/player-provider";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  usePlayer,
+  usePlayerDispatch
+} from "@/context/player-provider";
 
 const ShuffleButton = () => {
-  const { shuffle, toggleShuffle } = usePlayer();
+  const dispatch = usePlayerDispatch();
+  const { shuffle, shuffleAutoQueue } = usePlayer();
+
+  function handleShuffle() {
+    if (shuffle) {
+      dispatch({ type: "SET_SHUFFLE", shuffle: false, shuffleQueue: []});
+    } else {
+      shuffleAutoQueue();
+    }
+  }
+
   return (
     <>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger
             className="w-8 h-8 p-2 rounded-full hover:bg-card active:translate-y-[1px] active:scale-95"
-            onClick={toggleShuffle}
+            onClick={handleShuffle}
           >
             <ShuffleIcon className={shuffle ? "text-accent-foreground" : ""}/>
           </TooltipTrigger>

@@ -5,18 +5,23 @@ import { useNavigate } from "react-router-dom";
 import { Song, Playlist } from "@/db/models";
 import { useState, useEffect } from "react";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
-
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+// import { useQuery } from "@tanstack/react-query";
 
 const Queue = ({ ...props }: { [key: string]: any }) => {
+  // const { isPending, isError, data, error } = useQuery({
+  //   queryKey: ["playlists"],
+  //   queryFn: async () => {
+  //     const playlists = await window.playlists.getAllPlaylists();
+  //     return playlists;
+  //   },
+  // });
   const navigate = useNavigate();
   const player = usePlayer();
   const ui = useUi();

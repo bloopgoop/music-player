@@ -32,7 +32,7 @@ const Home = () => {
               className="-translate-x-10"
             />
           </div>
-          <div className="w-full text-center pb-3 border-b"
+          <div className="w-full text-center pb-3"
           >
             {currentSong?.artist ? currentSong?.artist : "Unknown"}
           </div>

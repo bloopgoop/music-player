@@ -6,14 +6,17 @@ import { addSongToPlaylist, deleteSongFromPlaylist } from "./db/crud";
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 contextBridge.exposeInMainWorld("songs", {
-  registerSongs: (args: any) => ipcRenderer.send("register songs", args),
+  registerSongs: (args: any) => ipcRenderer.invoke("register songs", args),
   getSongAudio: (id: number) => ipcRenderer.invoke("get song audio", id),
-  getSongsInPlaylist: (playlistName: string) => ipcRenderer.invoke("get songs in playlist", playlistName),
+  getSongsInPlaylist: (playlistName: string) =>
+    ipcRenderer.invoke("get songs in playlist", playlistName),
   getSongMetadata: (id: number) => ipcRenderer.invoke("get song metadata", id),
   editSong(id: number, args: any) {
     ipcRenderer.invoke("edit song", id, args);
   },
-  getSongsInQueue: (queue: number[]) => ipcRenderer.invoke("get songs in queue", queue),
+  getSongsInQueue: (queue: number[]) =>
+    ipcRenderer.invoke("get songs in queue", queue),
+  incrementListens: (id: number) => ipcRenderer.invoke("increment listens", id),
 });
 
 contextBridge.exposeInMainWorld("playlists", {
@@ -28,10 +31,13 @@ contextBridge.exposeInMainWorld("playlists", {
   deletePlaylist: (id: number) => ipcRenderer.invoke("delete playlist", id),
   editPlaylist: (args: any) => ipcRenderer.invoke("edit playlist", args),
 
-  addSongToPlaylist: (playlistName: string, songId: number) => ipcRenderer.invoke("add song to playlist", playlistName, songId),
-  deleteSongFromPlaylist: (playlistName: string, songId: number) => ipcRenderer.invoke("delete song from playlist", playlistName, songId),
+  addSongToPlaylist: (playlistName: string, songId: number) =>
+    ipcRenderer.invoke("add song to playlist", playlistName, songId),
+  deleteSongFromPlaylist: (playlistName: string, songId: number) =>
+    ipcRenderer.invoke("delete song from playlist", playlistName, songId),
   recievePlaylistUpdate: (callback: Function) => {
     ipcRenderer.on("recieve playlist update", (event, data) => callback(data));
   },
-  getSongIds: (playlistName: string) => ipcRenderer.invoke("get song ids", playlistName),
+  getSongIds: (playlistName: string) =>
+    ipcRenderer.invoke("get song ids", playlistName),
 });

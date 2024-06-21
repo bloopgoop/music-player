@@ -42,58 +42,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { DialogClose } from "@radix-ui/react-dialog";
 import EditPlaylist from "@/components/editPlaylistModal";
 import Image from "@/components/image";
-import { PlayIcon, PauseIcon } from "@radix-ui/react-icons";
-import { Button, ButtonProps } from "@/components/ui/button";
-import { usePlayer } from "@/context/player-provider";
+import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/playlist/dataTable";
 import { columns } from "@/components/playlist/columns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AspectRatio } from "@radix-ui/react-aspect-ratio";
-
-interface PlaylistPlayButtonProps extends ButtonProps {
-  playlist: string;
-  firstSongId: number;
-  width?: number;
-  height?: number;
-}
-
-const PlaylistPlayButton: React.FC<PlaylistPlayButtonProps> = ({
-  playlist,
-  firstSongId,
-  ...props
-}) => {
-  const {
-    paused,
-    togglePlay,
-    currentPlaylistName,
-    setCurrentPlaylistName,
-    playSong,
-    clearHistory,
-    clearAutoQueue,
-  } = usePlayer();
-
-  const playPlaylist = () => {
-    if (playlist === currentPlaylistName) {
-      togglePlay();
-      return;
-    } else {
-      setCurrentPlaylistName(playlist);
-      clearHistory();
-      clearAutoQueue();
-      playSong(firstSongId);
-    }
-  };
-
-  return (
-    <Button onClick={playPlaylist} {...props}>
-      {playlist === currentPlaylistName && !paused ? (
-        <PauseIcon width={20} height={20} className="text-primary" />
-      ) : (
-        <PlayIcon width={20} height={20} className="text-primary" />
-      )}
-    </Button>
-  );
-};
+import PlayButton from "@/components/playlist/buttons/playlistPlayButton";
+import LoopButton from "@/components/playlist/buttons/playlistLoopButton";
+import ShuffleButton from "@/components/playlist/buttons/playlistShuffleButton";
 
 const Playlist = () => {
   const location = useLocation();
@@ -156,29 +112,15 @@ const Playlist = () => {
       </header>
       <div className="p-3 flex-1 flex flex-col overflow-hidden" style={{}}>
         <div className="flex flex-row gap-6 py-3 items-center border-b">
-          <PlaylistPlayButton
-            playlist={playlist?.name}
+          <PlayButton
+            playlistName={playlist?.name}
             firstSongId={songs[0]?.id}
             className="p-3.5 bg-accent hover:bg-accent-foreground"
             variant="default"
             size="icon"
           />
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger className="flex items-center justify-center w-10 h-10 p-2.5 rounded-full hover:bg-muted/50 active:translate-y-[1px] active:scale-95">
-                <ShuffleIcon />
-              </TooltipTrigger>
-              <TooltipContent>Shuffle</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger className="flex items-center justify-center w-10 h-10 p-2.5 rounded-full hover:bg-muted/50 active:translate-y-[1px] active:scale-95">
-                <LoopIcon />
-              </TooltipTrigger>
-              <TooltipContent>Loop</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <ShuffleButton playlistName={playlist?.name} />
+          <LoopButton playlistName={playlist?.name} firstSongId={songs[0]?.id}/>
           <DropdownMenu>
             <DropdownMenuTrigger>
               <div className="hover:bg-muted/50 p-2.5 rounded-full">

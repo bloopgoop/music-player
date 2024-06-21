@@ -12,6 +12,19 @@ import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 
 const config: ForgeConfig = {
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'bloopgoop',
+          name: 'music-player'
+        },
+        prerelease: true,
+        draft: true
+      }
+    }
+  ],
   packagerConfig: {
     asar: true,
   },

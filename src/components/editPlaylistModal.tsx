@@ -26,6 +26,7 @@ import Placeholder from "../assets/placeholder.png";
 import { Playlist } from "@/db/models";
 import { useNavigate } from "react-router-dom";
 import Image from "@/components/image";
+import { bufferToFile } from "@/lib/utils";
 
 const PlaylistSchema = z.object({
   name: z.string(),
@@ -43,14 +44,15 @@ const EditPlaylist = ({
   playlist: Playlist;
 }) => {
   const navigate = useNavigate();
-  const [image, setImage] = useState<File | null>(null);
+  const imageFile = bufferToFile(playlist.image_buffer, playlist.image_mime);
+  const [image, setImage] = useState<File | null>(imageFile);
   const imageRef = useRef<HTMLInputElement>(null);
   const form = useForm<z.infer<typeof PlaylistSchema>>({
     resolver: zodResolver(PlaylistSchema),
     defaultValues: {
       name: playlist.name || "",
       description: playlist.description || "",
-      image: new File([], "image"),
+      image: imageFile,
     },
   });
 
@@ -68,6 +70,8 @@ const EditPlaylist = ({
       name: values.name,
       description: values.description,
       imageFilePath: filePath,
+      imageBuffer: playlist.image_buffer,
+      imageMime: playlist.image_mime,
       id: playlist.id,
     });
     setIsEditDialogOpen(false);

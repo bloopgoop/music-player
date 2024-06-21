@@ -24,25 +24,33 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import Placeholder from "../assets/placeholder.png";
 import { Song } from "@/db/models";
 import Image from "@/components/image";
-import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
+import { bufferToFile } from "@/lib/utils";
 
 const SongSchema = z.object({
   image: z.instanceof(File).optional(),
-  title: z.string().optional(),
+  title: z.string(),
   artist: z.string().optional(),
   album: z.string().optional(),
   genre: z.string().optional(),
   year: z.string().optional(),
 });
 
-const EditSongModal = ({ song }: { song: Song }) => {
-  const [image, setImage] = useState<File | null>(null);
+const EditSongModal = ({
+  song,
+  isOpen,
+  setIsOpen,
+}: {
+  song: Song;
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) => {
+  const imageFile = bufferToFile(song.image_buffer, song.image_mime);
+  const [image, setImage] = useState<File | null>(imageFile);
   const imageRef = useRef<HTMLInputElement>(null);
-  const audioRef = useRef<HTMLInputElement>(null);
   const form = useForm<z.infer<typeof SongSchema>>({
     resolver: zodResolver(SongSchema),
     defaultValues: {
-      image: null,
+      image: imageFile,
       title: song.title ? song.title : "",
       artist: song.artist ? song.artist : "",
       album: song.album ? song.album : "",
@@ -60,17 +68,26 @@ const EditSongModal = ({ song }: { song: Song }) => {
 
   async function submit(values: z.infer<typeof SongSchema>) {
     console.log(values);
-    const image = values.image.path;
+    const filePath = values.image.path;
+    const newSongName = await window.songs.editSong(song.id, {
+      title: values.title,
+      artist: values.artist,
+      album: values.album,
+      genre: values.genre,
+      year: values.year,
+      imageFilePath: filePath,
+      imageBuffer: song.image_buffer,
+      imageMime: song.image_mime,
+      id: song.id,
+    });
+    setIsOpen(false);
   }
 
   return (
-    <OverlayScrollbarsComponent
-      options={{ scrollbars: { autoHide: "leave" } }}
-      defer
-    >
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit song</DialogTitle>
+          <DialogTitle>Edit song {"(NOT WORKING)"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form
@@ -194,7 +211,7 @@ const EditSongModal = ({ song }: { song: Song }) => {
           </Button>
         </DialogFooter>
       </DialogContent>
-    </OverlayScrollbarsComponent>
+    </Dialog>
   );
 };
 export default EditSongModal;

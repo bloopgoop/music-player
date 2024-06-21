@@ -71,11 +71,28 @@ app.on("activate", () => {
   }
 });
 
+// Assuming tags is the object containing the image property
+interface ImageType {
+  mime: string;
+  type: {
+    id: number;
+    name?: string;
+  };
+  description: string;
+  imageBuffer: Buffer;
+}
+
+// This function checks if tags.image is of the ImageType
+function isImageType(image: any): image is ImageType {
+  return typeof image === 'object' && 'mime' in image;
+}
+
 /**
  * Register a song to the database, add it to the "All songs" playlist
  * @param info.filePaths[] - list of file paths as strings
  */
-ipcMain.on("register songs", async (event, info) => {
+ipcMain.handle("register songs", async (event, info) => {
+  console.log(info);
   const song_dir = app_dir + "/songs";
   if (!fs.existsSync(song_dir)) {
     fs.mkdirSync(song_dir, { recursive: true });
@@ -92,22 +109,34 @@ ipcMain.on("register songs", async (event, info) => {
         return;
       }
     });
+    
+    let image_mime;
+    let image_buffer;
 
     const tags = nodeID3.read(info.filePaths[i]);
+
+    if (isImageType(tags.image)) {
+      image_mime = tags.image.mime;
+      image_buffer = Buffer.from(tags.image.imageBuffer).toString("base64");
+    } else {
+      image_mime = undefined;
+      image_buffer = undefined;
+    }
+
     const duration = await mp3Duration(info.filePaths[i]);
     const songId = await crud.createSong(testdb, {
       path: newFilePath,
-      image_mime: typeof tags.image === "string" ? undefined : tags.image.mime,
-      image_buffer:
-        typeof tags.image === "string"
-          ? undefined
-          : Buffer.from(tags.image.imageBuffer).toString("base64"),
+      image_mime: image_mime,
+      image_buffer: image_buffer,
       title: tags.title,
       artist: tags.artist,
       album: tags.album,
       genre: tags.genre,
       year: tags.year,
-      lyrics: tags.unsynchronisedLyrics.text,
+      lyrics:
+        tags.unsynchronisedLyrics && tags.unsynchronisedLyrics?.text
+          ? tags.unsynchronisedLyrics?.text
+          : undefined,
       listens: 0,
       duration: duration,
       date_added: new Date().toISOString(),
@@ -153,12 +182,25 @@ ipcMain.handle("get song metadata", async (event, id: number) => {
  */
 ipcMain.handle("edit song", async (event, id: number, args: any) => {
   const original_song = await crud.getSongByID(testdb, id);
-  const imageBuffer = args.image
-    ? fs.readFileSync(args.image).toString("base64")
-    : undefined;
-  const imageMime = args.image ? mime.getType(args.image) : undefined;
+  console.log(args);
+  let imageBuffer;
+  let imageMime;
+  // Check if filepath is provided
+  if (args.imageFilePath) {
+    console.log("Image file path provided");
+    imageBuffer = args.imageFilePath
+      ? fs.readFileSync(args.imageFilePath).toString("base64")
+      : undefined;
+    imageMime = args.imageFilePath
+      ? mime.getType(args.imageFilePath)
+      : undefined;
+  } else {
+    console.log("Image file path not provided");
+    imageBuffer = args.imageBuffer;
+    imageMime = args.imageMime;
+  }
   const song = new Object({
-    path: args.path ? args.path : original_song.path,
+    path: args.path ? args.imageFilePath : original_song.path,
     title: args.title ? args.title : original_song.title,
     artist: args.artist ? args.artist : original_song.artist,
     album: args.album ? args.album : original_song.album,
@@ -183,6 +225,16 @@ ipcMain.handle("get songs in queue", async (event, queue: number[]) => {
     songs.push(await crud.getSongByID(testdb, queue[i]));
   }
   return songs;
+});
+
+/**
+ * Increment the listens of a song
+ * @param id - song id
+ * @returns - new listens count
+ */
+ipcMain.handle("increment listens", async (event, id: number) => {
+  const listens = await crud.incrementListens(testdb, id);
+  return listens;
 });
 
 /**
@@ -239,12 +291,22 @@ ipcMain.handle("delete playlist", async (event, id: number) => {
  */
 ipcMain.handle("edit playlist", async (event, args: any) => {
   console.log(args);
-  const imageBuffer = args.imageFilePath
-    ? fs.readFileSync(args.imageFilePath).toString("base64")
-    : undefined;
-  const imageMime = args.imageFilePath
-    ? mime.getType(args.imageFilePath)
-    : undefined;
+  let imageBuffer;
+  let imageMime;
+  // Check if filepath is provided
+  if (args.imageFilePath) {
+    console.log("Image file path provided");
+    imageBuffer = args.imageFilePath
+      ? fs.readFileSync(args.imageFilePath).toString("base64")
+      : undefined;
+    imageMime = args.imageFilePath
+      ? mime.getType(args.imageFilePath)
+      : undefined;
+  } else {
+    console.log("Image file path not provided");
+    imageBuffer = args.imageBuffer;
+    imageMime = args.imageMime;
+  }
   console.log(imageMime);
   const playlist = new Object({
     name: args.name,
@@ -295,5 +357,5 @@ ipcMain.handle(
  * @returns {number[]}
  */
 ipcMain.handle("get song ids", async (event, playlistName: string) => {
-  return await crud.getSongIds(testdb, playlistName)
+  return await crud.getSongIds(testdb, playlistName);
 });

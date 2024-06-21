@@ -8,6 +8,8 @@ import {
 } from "react";
 import { Playlist, Song } from "@/db/models";
 import { ReactNode } from "react";
+import { shuffleArray } from "@/lib/utils";
+import { Shuffle } from "lucide-react";
 
 const MAX_AUTO_QUEUE_LENGTH = 20;
 
@@ -18,6 +20,8 @@ interface Player {
   history: number[]; // song ids
   autoQueue: number[]; // song ids, songs that are added to the queue automatically
   userQueue: number[]; // song ids, songs that are added to the queue by the user
+  shuffleQueue: number[]; // song ids, shuffled songs from a playlist
+  songStart: Date;
 
   // settings
   masterVolume: number;
@@ -48,6 +52,8 @@ interface Player {
   setCurrentPlaylistName: (playlistName: string) => void;
   setMasterVolume: (volume: number) => void;
   setSliderVolume: (volume: number) => void;
+
+  shuffleAutoQueue: () => void;
 }
 
 const initialState: Player = {
@@ -67,6 +73,10 @@ const initialState: Player = {
   userQueue: localStorage.getItem("userQueue")
     ? JSON.parse(localStorage.getItem("userQueue"))
     : [],
+  shuffleQueue: localStorage.getItem("shuffleQueue")
+    ? JSON.parse(localStorage.getItem("shuffleQueue"))
+    : [],
+  songStart: new Date(),
 
   masterVolume: localStorage.getItem("masterVolume")
     ? Number(localStorage.getItem("masterVolume"))
@@ -84,7 +94,7 @@ const initialState: Player = {
   muted: false,
 };
 
-const actionTypes = {
+export const actionTypes = {
   PLAY_SONG: "PLAY_SONG",
   SKIP: "SKIP",
   PREVIOUS: "PREVIOUS",
@@ -104,6 +114,9 @@ const actionTypes = {
   SET_SHUFFLE: "SET_SHUFFLE",
   SET_PAUSED: "SET_PAUSED",
   SET_MUTED: "SET_MUTED",
+
+  USE_SHUFFLE_QUEUE: "USE_SHUFFLE_QUEUE",
+  SHUFFLE_AUTOQUEUE: "SHUFFLE_AUTOQUEUE",
 };
 
 function calcTotalVolume(sliderVolume: number, masterVolume: number) {
@@ -234,8 +247,13 @@ function playerReducer(state: Player, action) {
       return { ...state, loop: action.payload };
 
     case actionTypes.SET_SHUFFLE:
-      localStorage.setItem("shuffle", action.payload);
-      return { ...state, shuffle: action.payload };
+      localStorage.setItem("shuffle", action.shuffle);
+      localStorage.setItem("shuffleQueue", JSON.stringify(action.shuffleQueue));
+      return {
+        ...state,
+        shuffle: action.shuffle,
+        shuffleQueue: action.shuffleQueue,
+      };
 
     case actionTypes.SET_PAUSED:
       if (action.payload) {
@@ -247,6 +265,23 @@ function playerReducer(state: Player, action) {
 
     case actionTypes.SET_MUTED:
       return { ...state, muted: action.payload };
+
+    case actionTypes.USE_SHUFFLE_QUEUE: {
+      const amount = action.diff;
+      let nextSongs = state.shuffleQueue.slice(0, amount);
+      let newShuffleState = state.shuffleQueue.slice(amount) || [];
+      return {
+        ...state,
+        autoQueue: state.autoQueue.concat(nextSongs),
+        shuffleQueue: newShuffleState,
+      };
+    }
+
+    case actionTypes.SHUFFLE_AUTOQUEUE: {
+      let newAutoQueue = [...state.autoQueue]
+      shuffleArray(newAutoQueue);
+      return { ...state, autoQueue: newAutoQueue, shuffle: true };
+    }
 
     default:
       return state;
@@ -263,37 +298,93 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Auto queue up to 20 songs, starting from the current song
   async function autoQueueSongs() {
-    // console.log("autoQueueing songs");
-    if (state.autoQueue.length < MAX_AUTO_QUEUE_LENGTH) {
-      let diff = MAX_AUTO_QUEUE_LENGTH - state.autoQueue.length;
-      let playlistName;
-      if (state.loop && state.currentPlaylistName) {
-        playlistName = state.currentPlaylistName;
-      } else {
-        playlistName = "All songs";
+    const diff = MAX_AUTO_QUEUE_LENGTH - state.autoQueue.length;
+    let nextSongs = [];
+    if (diff > 0) {
+      // If shuffle is on, push the suffled songs to autoqueue first
+      if (state.shuffle && state.shuffleQueue.length > 0) {
+        dispatch({ type: actionTypes.USE_SHUFFLE_QUEUE, diff: diff });
       }
-      // console.log("diff", diff);
-      // console.log("playlistname", playlistName);
 
-      let songsIds = await window.playlists.getSongIds(playlistName);
-      // console.log(songsIds);
-      // console.log(state.currentSongId);
-      // find the index of the current song
-      let currentSongIndex = songsIds.findIndex(
-        (songId: number) => songId === state.currentSongId
+      const playlistName = state.currentPlaylistName || "All songs";
+      const songsIds = await window.playlists.getSongIds(playlistName);
+      const currentSongIndex = songsIds.findIndex(
+        (songId) => songId === state.currentSongId
       );
-      // console.log(currentSongIndex);
-      let nextSongIndex = currentSongIndex + 1;
-      let nextSongs = songsIds.slice(nextSongIndex, nextSongIndex + diff);
-      // console.log(nextSongs);
-      while (nextSongs.length < diff) {
-        nextSongs = nextSongs.concat(
-          songsIds.slice(0, diff - nextSongs.length)
+
+      // Get the next songs in the current playlist
+      nextSongs = songsIds.slice(
+        currentSongIndex + 1,
+        currentSongIndex + 1 + diff
+      );
+
+      if (state.loop) {
+        while (nextSongs.length < diff) {
+          nextSongs = nextSongs.concat(
+            songsIds.slice(0, diff - nextSongs.length)
+          );
+        }
+      } else {
+        // Get from all songs
+        const allSongsIds = await window.playlists.getSongIds("All songs");
+        const currentSongIndexInAllPlaylist = allSongsIds.findIndex(
+          (songId) => songId === state.currentSongId
         );
+        nextSongs = nextSongs.concat(
+          allSongsIds.slice(
+            currentSongIndexInAllPlaylist + 1,
+            currentSongIndexInAllPlaylist + 1 + diff - nextSongs.length
+          )
+        );
+        while (nextSongs.length < diff) {
+          nextSongs = nextSongs.concat(
+            allSongsIds.slice(0, diff - nextSongs.length)
+          );
+        }
       }
-      // console.log(nextSongs);
-      dispatch({ type: actionTypes.PUSH_TO_AUTO_QUEUE, payload: nextSongs });
     }
+    dispatch({ type: actionTypes.PUSH_TO_AUTO_QUEUE, payload: nextSongs });
+
+    // if (state.autoQueue.length < MAX_AUTO_QUEUE_LENGTH) {
+    //   let diff = MAX_AUTO_QUEUE_LENGTH - state.autoQueue.length;
+    //   let playlistName;
+    //   if (state.currentPlaylistName) {
+    //     playlistName = state.currentPlaylistName;
+    //   } else {
+    //     playlistName = "All songs";
+    //   }
+
+    //   let songsIds = await window.playlists.getSongIds(playlistName);
+    //   // find the index of the current song
+    //   let currentSongIndex = songsIds.findIndex(
+    //     (songId: number) => songId === state.currentSongId
+    //   );
+    //   let nextSongIndex = currentSongIndex + 1;
+    //   let nextSongs = songsIds.slice(nextSongIndex, nextSongIndex + diff);
+
+    //   if (state.loop) {
+    //     while (nextSongs.length < diff) {
+    //       nextSongs = nextSongs.concat(
+    //         songsIds.slice(0, diff - nextSongs.length)
+    //       );
+    //     }
+    //   } else {
+    //     // get from all songs
+    //     let songsIds = await window.playlists.getSongIds("All songs");
+    //     let currentSongIndex = songsIds.findIndex(
+    //       (songId: number) => songId === state.currentSongId
+    //     );
+    //     nextSongIndex = currentSongIndex + 1;
+    //     nextSongs = nextSongs.concat(
+    //       songsIds.slice(nextSongIndex, nextSongIndex + diff)
+    //     );
+    //     while (nextSongs.length < diff) {
+    //       nextSongs = nextSongs.concat(
+    //         songsIds.slice(0, diff - nextSongs.length)
+    //       );
+    //     }
+    //   }
+    // }
   }
 
   function playSong(songId: number) {
@@ -366,10 +457,22 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: actionTypes.SET_SLIDER_VOLUME, payload: volume });
   }
 
+  function shuffleAutoQueue() {
+    dispatch({ type: actionTypes.SHUFFLE_AUTOQUEUE });
+  }
+
+  useEffect(() => {
+    state.player.volume = calcTotalVolume(
+      state.sliderVolume,
+      state.masterVolume
+    );
+  }, [state.sliderVolume, state.masterVolume]);
+
   useEffect(() => {
     localStorage.setItem("history", JSON.stringify(state.history));
     localStorage.setItem("userQueue", JSON.stringify(state.userQueue));
     localStorage.setItem("autoQueue", JSON.stringify(state.autoQueue));
+    localStorage.setItem("shuffleQueue", JSON.stringify(state.shuffleQueue));
     localStorage.setItem("currentSongId", state.currentSongId);
     localStorage.setItem("currentPlaylistName", state.currentPlaylistName);
     localStorage.setItem("masterVolume", state.masterVolume);
@@ -381,6 +484,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     async function getCurrentAudio() {
       if (state.currentSongId) {
+        await window.songs.incrementListens(state.currentSongId);
         const songAudio = await window.songs.getSongAudio(state.currentSongId);
         state.player.src = `data:audio/mp3;base64,${songAudio}`;
       }
@@ -389,7 +493,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     state.player.addEventListener("ended", () => {
       dispatch({ type: actionTypes.SKIP });
     });
-    if (state.autoQueue.length < 20) {
+
+    if (state.autoQueue.length < MAX_AUTO_QUEUE_LENGTH) {
       autoQueueSongs();
     }
 
@@ -435,6 +540,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setCurrentPlaylistName: setCurrentPlaylistName,
     setMasterVolume: setMasterVolume,
     setSliderVolume: setSliderVolume,
+
+    shuffleAutoQueue:shuffleAutoQueue
   };
 
   return (
